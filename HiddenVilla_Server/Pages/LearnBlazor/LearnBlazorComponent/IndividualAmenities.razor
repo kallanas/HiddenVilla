@@ -1,0 +1,28 @@
+﻿
+<div @onclick="(args) => ClickAmenitySelection(args, Amenity.Name)" class="col-5 border p-2 bg-light offset-1">
+    
+    <h4 class="text-secondary">Amenity - @Amenity.Id </h4>
+
+    @Amenity.Name<br />
+    @Amenity.Description<br />
+    RF from Parent - @FirstFragment @SecondFragment
+</div>
+
+@code {
+    [Parameter]
+    public Amenity Amenity { get; set; }
+
+    [Parameter]
+    public RenderFragment FirstFragment { get; set; }
+
+    [Parameter]
+    public RenderFragment SecondFragment { get; set; }
+
+    [Parameter]
+    public EventCallback<string> OnClickAmenitySelection { get; set; }
+
+    protected async Task ClickAmenitySelection(MouseEventArgs e, string name)
+    {
+        await OnClickAmenitySelection.InvokeAsync(name);
+    }
+}
