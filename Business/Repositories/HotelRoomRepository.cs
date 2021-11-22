@@ -5,6 +5,8 @@ using Microsoft.EntityFrameworkCore;
 using Models;
 using System;
 using System.Collections.Generic;
+using System.IO;
+using System.Linq;
 using System.Threading.Tasks;
 
 namespace Business.Repositories
@@ -36,7 +38,11 @@ namespace Business.Repositories
             var roomToDelete = await _dbContext.HotelRooms.FindAsync(roomId);
             if (roomToDelete != default)
             {
+                var allImages = await _dbContext.HotelRoomImages.Where(i => i.RoomId == roomId).ToListAsync();
+
+                _dbContext.HotelRoomImages.RemoveRange(allImages);
                 _dbContext.HotelRooms.Remove(roomToDelete);
+
                 return await _dbContext.SaveChangesAsync();
             }
             return 0;

@@ -2,6 +2,8 @@
 @using Models
 @using Business.Repositories.IRepositories
 @inject IHotelRoomRepository hotelRoomRepository
+@inject IJSRuntime jsRunTime;
+@inject IFileUpload fileUpload; 
 
 <div class="row mt-4">
     <div class="col-8">
@@ -35,6 +37,7 @@
                             <td>@room.SqFt</td>
                             <td>
                                 <NavLink href="@($"hotel-room/edit/{room.Id}")" class="btn  btn-primary">Edit</NavLink>
+                                <button class="btn btn-danger" @onclick="() => HandleDelete(room.Id)">Delete</button>
                             </td>
                         </tr>
                     }
@@ -51,10 +54,42 @@
     </div>
 </div>
 
+<DeleteConfirmation isParentComponentProcessing="isProcessing" ConfirmationChanged="ConfirmDelete_Click"></DeleteConfirmation>
+
 @code {
     private IEnumerable<HotelRoomDTO> HotelRooms { get; set; } = new List<HotelRoomDTO>();
+    private int? DeleteRoomID { get; set; } = null;
+    public bool isProcessing { get; set; } = false;
+
     protected async override Task OnInitializedAsync()
     {
         HotelRooms = await hotelRoomRepository.GetAllHotelRooms();
     }
+
+    private async Task HandleDelete(int roomId)
+    {
+        DeleteRoomID = roomId;
+        await jsRunTime.InvokeVoidAsync("ShowDeleleteConfirmationModal");
+
+    }
+
+    public async Task ConfirmDelete_Click(bool isConfirmed)
+    {
+        isProcessing = true;
+        if (isConfirmed && DeleteRoomID != null)
+        {
+            var hotelRoom = await hotelRoomRepository.GetHotelRoom(DeleteRoomID.Value);
+            foreach (var image in hotelRoom.HotelRoomImages)
+            {
+                fileUpload.DeleteFile(image.RoomImageUrl.Replace("RoomImages/", ""));
+            }
+
+            await hotelRoomRepository.DeleteHotelRoom(DeleteRoomID.Value);
+            await jsRunTime.ToastrSuccess("Hotel room deleted successfully!!!");
+            HotelRooms = await hotelRoomRepository.GetAllHotelRooms();
+        }
+        await jsRunTime.InvokeVoidAsync("HideDeleleteConfirmationModal");
+        isProcessing = false;
+    }
+
 }
