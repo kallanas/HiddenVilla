@@ -28,10 +28,10 @@ window.TestSwal = (type, message) => {
 
 }
 
-function ShowDeleleteConfirmationModal() {
+function ShowDeleteConfirmationModal() {
     $('#deleteConfirmationModal').modal('show');
 }
 
-function HideDeleleteConfirmationModal() {
+function HideDeleteConfirmationModal() {
     $('#deleteConfirmationModal').modal('hide');
 }

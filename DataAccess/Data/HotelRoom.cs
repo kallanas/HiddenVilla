@@ -23,5 +23,6 @@ namespace DataAccess.Data
         public string UpdatedBy { get; set; }
         public DateTime UpdatedDate { get; set; }
         public ICollection<HotelRoomImage> HotelRoomImages { get; set; }
+        public ICollection<HotelAmenity> HotelAmenities { get; set; }
     }
 }

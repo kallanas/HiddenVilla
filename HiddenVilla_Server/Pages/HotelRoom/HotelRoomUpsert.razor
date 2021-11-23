@@ -11,6 +11,7 @@
 @inject IJSRuntime jsRuntime
 @inject IFileUpload fileUpload
 
+
 <div class="row mt-2 mb-5">
     <h3 class="card-title text-info mb-3 ml-3">@Title Hotel Room</h3>
     <div class="col-md-12">
@@ -71,7 +72,7 @@
                                 </span>
                             </ToolbarContent>
                             <EditorContent>
-                                
+
                             </EditorContent>
                         </BlazoredTextEditor>
                     </div>
@@ -119,11 +120,19 @@
     private HotelRoomImageDTO RoomImage { get; set; } = new HotelRoomImageDTO();
     private List<string> DeletedImageUrls { get; set; } = new List<string>();
     private bool IsImageUploadedProcessStarted { get; set; } = false;
-
     public BlazoredTextEditor QuillHtml { get; set; }
+
+    [CascadingParameter]
+    public Task<AuthenticationState> AuthenticationState { get; set; }
 
     protected async override Task OnInitializedAsync()
     {
+        var authState = await AuthenticationState;
+        if (!authState.User.IsInRole(CommonFiles.StaticDetail.Role_Admin))
+        {
+            var uri = new Uri(navManager.Uri);
+            navManager.NavigateTo($"/identity/account/login?returnUrl={uri.LocalPath}");
+        }
         if (Id != null)
         {
             //updating
@@ -141,10 +150,28 @@
         }
     }
 
-    protected override Task OnAfterRenderAsync(bool firstRender)
+    protected async override Task OnAfterRenderAsync(bool firstRender)
     {
-        SetHTML();
-        return base.OnAfterRenderAsync(firstRender);
+        if (!firstRender)
+            return;
+        bool loading = true;
+        while (loading)
+        {
+            try
+            {
+                if (!string.IsNullOrEmpty(HotelRoomModel.Details))
+                {
+                    await this.QuillHtml.LoadHTMLContent(HotelRoomModel.Details);
+                }
+                loading = false;
+            }
+            catch
+            {
+                await Task.Delay(10);
+                loading = true;
+            }
+        }
+
     }
 
     private async Task HandleHotelRoomUpsert()
@@ -160,6 +187,8 @@
             }
             if ((HotelRoomModel.Id != 0) && (Title == "Update"))
             {
+                HotelRoomModel.Details = await QuillHtml.GetHTML();
+
                 var roomToUpdate = await hotelRoomRepository.UpdateHotelRoom(HotelRoomModel.Id, HotelRoomModel);
                 if ((HotelRoomModel.ImageUrls != null && HotelRoomModel.ImageUrls.Any())
                     || (DeletedImageUrls != null && DeletedImageUrls.Any()))
@@ -168,7 +197,7 @@
                     {
                         foreach (var deletedImageUrl in DeletedImageUrls)
                         {
-                            var imageName = deletedImageUrl.Replace("RoomImages/", "");
+                            var imageName = deletedImageUrl.Replace($"{navManager.BaseUri}RoomImages/", "");
                             var result = fileUpload.DeleteFile(imageName);
                             await hotelRoomImageRepository.DeleteHotelRoomImageByImageUrl(deletedImageUrl);
                         }
@@ -192,15 +221,6 @@
         }
 
         navManager.NavigateTo("hotel-room");
-    }
-
-    public void SetHTML()
-    {
-        if (!string.IsNullOrEmpty(HotelRoomModel.Details))
-        {
-           this.QuillHtml.LoadHTMLContent(HotelRoomModel.Details);
-        }
-        StateHasChanged();
     }
 
     private async Task HandleImageUpload(InputFileChangeEventArgs e)
@@ -276,8 +296,8 @@
         try
         {
             var imageIndex = HotelRoomModel.ImageUrls.FindIndex(x => x == imageUrl);
-            var imageName = imageUrl.Replace("RoomImages/", "");
-            if(HotelRoomModel.Id == 0 && Title == "Create")
+            var imageName = imageUrl.Replace($"{navManager.BaseUri}RoomImages/", "");
+            if (HotelRoomModel.Id == 0 && Title == "Create")
             {
                 var result = fileUpload.DeleteFile(imageName);
             }

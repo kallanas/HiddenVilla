@@ -17,6 +17,7 @@ using Business.Repositories.IRepositories;
 using Business.Repositories;
 using HiddenVilla_Server.Service.IService;
 using HiddenVilla_Server.Service;
+using Microsoft.AspNetCore.Identity;
 
 namespace HiddenVilla_Server
 {
@@ -35,17 +36,26 @@ namespace HiddenVilla_Server
         {
             services.AddDbContext<ApplicationDbContext>(options =>
                 options.UseSqlServer(Configuration.GetConnectionString("DefaultConnection")));
+
+            services.AddIdentity<IdentityUser, IdentityRole>()
+                .AddEntityFrameworkStores<ApplicationDbContext>()
+                .AddDefaultTokenProviders()
+                .AddDefaultUI();
+
             services.AddAutoMapper(AppDomain.CurrentDomain.GetAssemblies());
             services.AddScoped<IHotelRoomRepository, HotelRoomRepository>();
             services.AddScoped<IHotelRoomImageRepository, HotelRoomImageRepository>();
+            services.AddScoped<IHotelAmenityRepository, HotelAmenityRepository>();
+            services.AddScoped<IDbInitializer, DbInitializer>();
             services.AddScoped<IFileUpload, FileUpload>();
             services.AddRazorPages();
+            services.AddHttpContextAccessor();
             services.AddServerSideBlazor();
             services.AddSingleton<WeatherForecastService>();
         }
 
         // This method gets called by the runtime. Use this method to configure the HTTP request pipeline.
-        public void Configure(IApplicationBuilder app, IWebHostEnvironment env)
+        public void Configure(IApplicationBuilder app, IWebHostEnvironment env, IDbInitializer dbInitializer)
         {
             if (env.IsDevelopment())
             {
@@ -60,11 +70,15 @@ namespace HiddenVilla_Server
 
             app.UseHttpsRedirection();
             app.UseStaticFiles();
-
             app.UseRouting();
+
+            app.UseAuthentication();
+            app.UseAuthorization();
+            dbInitializer.Initialize();
 
             app.UseEndpoints(endpoints =>
             {
+                endpoints.MapRazorPages();
                 endpoints.MapBlazorHub();
                 endpoints.MapFallbackToPage("/_Host");
             });
